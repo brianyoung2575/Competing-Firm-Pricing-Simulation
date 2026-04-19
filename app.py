@@ -29,9 +29,7 @@ steps = st.sidebar.slider("Steps per run", 1, 50, 10)
 if st.sidebar.button("Run Simulation"):
     for _ in range(steps):
         sim.step(shock_prob, magnitude)
-
-    st.success("Simulation updated!")
-
+        
 fig, ax = plt.subplots(figsize=(6, 3))
 
 for name, data in sim.history.items():
