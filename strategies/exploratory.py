@@ -1,44 +1,49 @@
 import random
 from .base import BaseStrategy
 
-class RegimeExploratoryStrategy(BaseStrategy):
+class FullRangeExploratoryStrategy(BaseStrategy):
     def __init__(self):
-        self.price = 10
-        self.direction = None
-        self.lock_steps = 0
-        self.min_hold = 5
+        self.prices = list(range(1, 101))
+        self.index = 0
 
-        self.last_profit = 0
-        self.prev_profit = 0
+        self.q_values = {p: 0 for p in self.prices}
+        self.counts = {p: 0 for p in self.prices}
+
+        self.last_price = 10
+        self.exploit = False
+        self.lock = 0
 
     def choose_price(self, state):
-        self.prev_profit = self.last_profit
-        self.last_profit = state.get("last_profit", 0)
+        last_profit = state.get("last_profit", 0)
 
-        if self.lock_steps > 0:
-            self.lock_steps -= 1
+        if self.last_price is not None:
+            p = self.last_price
+            self.counts[p] += 1
+            n = self.counts[p]
+            self.q_values[p] += (last_profit - self.q_values[p]) / n
 
-            if self.last_profit < self.prev_profit * 0.8:
-                self.lock_steps = 0
+        if self.lock > 0:
+            self.lock -= 1
 
-            return self.price
+            if last_profit < self.q_values[self.last_price] * 0.5:
+                self.lock = 0
 
-        if self.direction is None:
-            self.direction = random.choice([-1, 1])
-            shock = random.uniform(5, 20)
+            return self.last_price
 
-            self.price = max(0.1, self.price + self.direction * shock)
+        if not self.exploit:
+            price = self.prices[self.index]
+            self.index = (self.index + 1) % len(self.prices)
 
-            return self.price
-
-        new_price = self.price * (1 + 0.8 * self.direction * 0.1)
-
-        if self.last_profit > self.prev_profit:
-            self.price = new_price
+            if self.index == 0:
+                self.exploit = True
         else:
-            self.direction *= -1
-            self.price = self.price * (1 + 0.8 * self.direction * 0.1)
+            best_price = max(self.q_values, key=self.q_values.get)
+            price = best_price + random.randint(-2, 2)
 
-        self.lock_steps = self.min_hold
+            if random.random() < 0.05:
+                self.exploit = False
 
-        return self.price
+        self.last_price = max(1, min(100, price))
+        self.lock = 5
+
+        return self.last_price
