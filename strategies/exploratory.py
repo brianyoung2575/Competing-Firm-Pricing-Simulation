@@ -1,28 +1,50 @@
 import random
-from collections import defaultdict
+import math
 from .base import BaseStrategy
 
-class MLExploratoryStrategy(BaseStrategy):
-    def __init__(self, epsilon=0.2):
-        self.epsilon = epsilon
-        self.q_values = defaultdict(float)
-        self.counts = defaultdict(int)
+class AdaptiveExploratoryStrategy(BaseStrategy):
+    def __init__(self):
+        self.q_values = {}
         self.last_price = 10
+        self.temperature = 5.0
+        self.best_price = 10
+        self.best_value = float("-inf")
 
     def choose_price(self, state):
         last_profit = state.get("last_profit", 0)
-
-        if self.last_price is not None:
-            c = self.counts[self.last_price]
-            q = self.q_values[self.last_price]
-
-            self.q_values[self.last_price] = q + (last_profit - q) / (c + 1)
-            self.counts[self.last_price] += 1
-
-        if random.random() < self.epsilon:
-            price = random.uniform(1, 80)
+        
+        if self.last_price not in self.q_values:
+            self.q_values[self.last_price] = last_profit
         else:
-            price = max(self.q_values, key=self.q_values.get, default=10)
+            self.q_values[self.last_price] = (
+                0.85 * self.q_values[self.last_price]
+                + 0.15 * last_profit
+            )
 
-        self.last_price = price
-        return price
+        if last_profit > self.best_value:
+            self.best_value = last_profit
+            self.best_price = self.last_price
+
+        self.temperature *= 0.995
+
+        if random.random() < 0.02:
+            self.temperature = 5.0
+
+        prices = list(self.q_values.keys())
+
+        if len(prices) < 5 or random.random() < self.temperature / 10:
+            price = random.uniform(1, 100)
+        else:
+            weights = []
+            for p in prices:
+                q = self.q_values[p]
+                weights.append(math.exp(q / max(self.temperature, 0.1)))
+
+            total = sum(weights)
+            probs = [w / total for w in weights]
+
+            price = random.choices(prices, weights=probs, k=1)[0]
+            price += random.uniform(-3, 3)
+
+        self.last_price = max(0.1, price)
+        return self.last_price
