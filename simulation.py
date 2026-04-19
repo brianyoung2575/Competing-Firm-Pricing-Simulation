@@ -14,8 +14,6 @@ class Simulation:
 
     def step(self, shock_prob=0.1, magnitude=0.1):
         results = {}
-
-        # each strategy picks a price
         prices = {}
         for name, strat in self.strategies.items():
             state = {
@@ -24,7 +22,6 @@ class Simulation:
             }
             prices[name] = strat.choose_price(state)
 
-        # market step per firm (simplified independent demand)
         for name, price in prices.items():
             outcome = self.engine.step(price, shock_prob, magnitude)
 
