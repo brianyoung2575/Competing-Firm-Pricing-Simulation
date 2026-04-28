@@ -1,5 +1,1 @@
-from .base import BaseStrategy
-
-class SimpleStrategy(BaseStrategy):
-    def choose_price(self, state):
-        return 10
+class SimpleStrategy(BaseStrategy): def __init__(self, price=10): self.price = price def choose_price(self, state): return self.price
